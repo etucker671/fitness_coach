@@ -2,10 +2,22 @@
   "openapi": "3.0.0",
   "info": { "title": "Health & Workout Memory API", "version": "1.0.0" },
   "servers": [{ "url": "https://fitness-memory-worker.etucker-fitness-coach.workers.dev/" }],
+  "components": {
+    "parameters": {
+      "id": {
+        "name": "id",
+        "in": "query",
+        "required": true,
+        "schema": { "type": "integer" },
+        "description": "The numeric id of the row to modify or delete."
+      }
+    }
+  },
   "paths": {
     "/meals": {
-      "get": { "summary": "Get meals", "responses": { "200": { "description": "Success" } } },
+      "get": { "operationId": "getMeals", "summary": "Get meals", "responses": { "200": { "description": "Success" } } },
       "post": {
+        "operationId": "logMeal",
         "summary": "Log a meal",
         "requestBody": {
           "required": true,
@@ -14,6 +26,7 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "log_date": { "type": "string", "format": "date", "description": "Defaults to today if omitted." },
                   "meal_type": { "type": "string" },
                   "food_name": { "type": "string" },
                   "quantity": { "type": "number" },
@@ -28,11 +41,45 @@
           }
         },
         "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "operationId": "editMeal",
+        "summary": "Edit a meal by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "log_date": { "type": "string", "format": "date" },
+                  "meal_type": { "type": "string" },
+                  "food_name": { "type": "string" },
+                  "quantity": { "type": "number" },
+                  "units": { "type": "string" },
+                  "calories": { "type": "integer" },
+                  "protein_g": { "type": "number" },
+                  "carbs_g": { "type": "number" },
+                  "fat_g": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "operationId": "deleteMeal",
+        "summary": "Delete a meal by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "description": "Success" } }
       }
     },
     "/exercises": {
-      "get": { "summary": "Get exercises", "responses": { "200": { "description": "Success" } } },
+      "get": { "operationId": "getExercises", "summary": "Get exercises", "responses": { "200": { "description": "Success" } } },
       "post": {
+        "operationId": "logExercise",
         "summary": "Log exercise",
         "requestBody": {
           "required": true,
@@ -41,11 +88,13 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "log_date": { "type": "string", "format": "date", "description": "Defaults to today if omitted." },
                   "activity_description": { "type": "string" },
                   "sets": { "type": "integer" },
                   "reps": { "type": "integer" },
                   "weight_lbs": { "type": "number" },
                   "distance_miles": { "type": "number" },
+                  "step_count": { "type": "integer" },
                   "calories_burned": { "type": "integer" }
                 }
               }
@@ -53,11 +102,11 @@
           }
         },
         "responses": { "200": { "description": "Success" } }
-      }
-    },
-    "/body_metrics": {
-      "post": {
-        "summary": "Log weight/waist",
+      },
+      "patch": {
+        "operationId": "editExercise",
+        "summary": "Edit an exercise entry by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
         "requestBody": {
           "required": true,
           "content": {
@@ -65,6 +114,41 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "log_date": { "type": "string", "format": "date" },
+                  "activity_description": { "type": "string" },
+                  "sets": { "type": "integer" },
+                  "reps": { "type": "integer" },
+                  "weight_lbs": { "type": "number" },
+                  "distance_miles": { "type": "number" },
+                  "step_count": { "type": "integer" },
+                  "calories_burned": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "operationId": "deleteExercise",
+        "summary": "Delete an exercise entry by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/body_metrics": {
+      "get": { "operationId": "getBodyMetrics", "summary": "Get weight/waist history", "responses": { "200": { "description": "Success" } } },
+      "post": {
+        "operationId": "logBodyMetrics",
+        "summary": "Log or update weight/waist for a date (upsert by log_date - safe to call again for the same date to add or correct a value)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "log_date": { "type": "string", "format": "date", "description": "Defaults to today if omitted. One row per date - posting again for an existing date merges in the new fields." },
                   "weight_lbs": { "type": "number" },
                   "waist_inches": { "type": "number" }
                 }
@@ -73,14 +157,51 @@
           }
         },
         "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "operationId": "deleteBodyMetric",
+        "summary": "Delete a body metrics entry by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/daily_notes": {
+      "get": { "operationId": "getDailyNotes", "summary": "Get daily notes history", "responses": { "200": { "description": "Success" } } },
+      "post": {
+        "operationId": "logDailyNote",
+        "summary": "Log or update the daily note for a date (upsert by log_date - safe to call again for the same date to amend it)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "log_date": { "type": "string", "format": "date", "description": "Defaults to today if omitted. One row per date - posting again for an existing date merges in the new fields." },
+                  "energy_level": { "type": "integer", "minimum": 1, "maximum": 10 },
+                  "challenges": { "type": "string" },
+                  "victories": { "type": "string" },
+                  "general_notes": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      },
+      "delete": {
+        "operationId": "deleteDailyNote",
+        "summary": "Delete a daily note by id",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "description": "Success" } }
       }
     },
     "/user_goals": {
-      "get": { "summary": "Read goal rules", "responses": { "200": { "description": "Success" } } },
-      "patch": { "summary": "Update goals document", "responses": { "200": { "description": "Success" } } }
+      "get": { "operationId": "getUserGoals", "summary": "Read goal rules", "responses": { "200": { "description": "Success" } } },
+      "patch": { "operationId": "updateUserGoals", "summary": "Update goals document", "responses": { "200": { "description": "Success" } } }
     },
     "/daily_summaries": {
-      "get": { "summary": "Get daily calorie totals", "responses": { "200": { "description": "Success" } } }
+      "get": { "operationId": "getDailySummaries", "summary": "Get daily calorie totals", "responses": { "200": { "description": "Success" } } }
     }
   }
 }

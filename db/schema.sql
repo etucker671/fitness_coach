@@ -2,7 +2,7 @@
 CREATE TABLE user_goals (
     id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     plan_data JSONB NOT NULL,
-    updated_at TIMESTAMP WITH TIMEZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. Body Metrics
@@ -11,7 +11,7 @@ CREATE TABLE body_metrics (
     log_date DATE NOT NULL UNIQUE DEFAULT CURRENT_DATE,
     weight_lbs NUMERIC(5,2),
     waist_inches NUMERIC(4,2),
-    created_at TIMESTAMP WITH TIMEZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3. Daily Notes
@@ -22,7 +22,7 @@ CREATE TABLE daily_notes (
     challenges TEXT,
     victories TEXT,
     general_notes TEXT,
-    created_at TIMESTAMP WITH TIMEZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. Meals Table
@@ -39,7 +39,7 @@ CREATE TABLE meals (
     carbs_g NUMERIC DEFAULT 0,
     fat_g NUMERIC DEFAULT 0,
     metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIMEZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 5. Exercises Table
@@ -54,7 +54,7 @@ CREATE TABLE exercises (
     step_count INT,
     calories_burned INT DEFAULT 0,
     metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIMEZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 6. Daily Summary Rollup View
