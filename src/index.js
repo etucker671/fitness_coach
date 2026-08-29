@@ -12,6 +12,7 @@ export default {
     const url = new URL(request.url);
     const resource = url.pathname.replace('/', '');
     const validTables = ['user_goals', 'body_metrics', 'daily_notes', 'meals', 'exercises', 'daily_summaries'];
+    const upsertByDate = ['body_metrics', 'daily_notes'];
 
     if (!validTables.includes(resource)) {
       return Response.json({ error: "Invalid Endpoint" }, { status: 404 });
@@ -29,18 +30,34 @@ export default {
       return Response.json(error || data);
     }
 
-    // POST: Log new entries
+    // POST: Log new entries (or, for date-unique tables, merge into that date's row)
     if (request.method === 'POST') {
       const body = await request.json();
-      const { data, error } = await supabase.from(resource).insert(Array.isArray(body) ? body : [body]);
+      const rows = Array.isArray(body) ? body : [body];
+      const { data, error } = upsertByDate.includes(resource)
+        ? await supabase.from(resource).upsert(rows, { onConflict: 'log_date' })
+        : await supabase.from(resource).insert(rows);
       return Response.json(error || data);
     }
 
-    // PATCH: Modify entries or goal JSON document
+    // PATCH: Modify entries by id (or the goal JSON document, which is always id=1)
     if (request.method === 'PATCH') {
       const id = url.searchParams.get('id');
+      if (!id && resource !== 'user_goals') {
+        return Response.json({ error: "Missing required 'id' query parameter" }, { status: 400 });
+      }
       const body = await request.json();
       const { data, error } = await supabase.from(resource).update(body).eq('id', id || 1);
+      return Response.json(error || data);
+    }
+
+    // DELETE: Remove a single entry by id
+    if (request.method === 'DELETE') {
+      const id = url.searchParams.get('id');
+      if (!id) {
+        return Response.json({ error: "Missing required 'id' query parameter" }, { status: 400 });
+      }
+      const { data, error } = await supabase.from(resource).delete().eq('id', id);
       return Response.json(error || data);
     }
 
