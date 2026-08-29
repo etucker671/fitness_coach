@@ -2,6 +2,7 @@
 CREATE TABLE user_goals (
     id INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     plan_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -11,7 +12,8 @@ CREATE TABLE body_metrics (
     log_date DATE NOT NULL UNIQUE DEFAULT CURRENT_DATE,
     weight_lbs NUMERIC(5,2),
     waist_inches NUMERIC(4,2),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 3. Daily Notes
@@ -22,7 +24,8 @@ CREATE TABLE daily_notes (
     challenges TEXT,
     victories TEXT,
     general_notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. Meals Table
@@ -39,7 +42,8 @@ CREATE TABLE meals (
     carbs_g NUMERIC DEFAULT 0,
     fat_g NUMERIC DEFAULT 0,
     metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 5. Exercises Table
@@ -54,8 +58,43 @@ CREATE TABLE exercises (
     step_count INT,
     calories_burned INT DEFAULT 0,
     metadata JSONB DEFAULT '{}'::jsonb,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Shared trigger: keeps updated_at current on every UPDATE (DEFAULT only fires on INSERT)
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER user_goals_set_updated_at
+BEFORE UPDATE ON user_goals
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER body_metrics_set_updated_at
+BEFORE UPDATE ON body_metrics
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER daily_notes_set_updated_at
+BEFORE UPDATE ON daily_notes
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER meals_set_updated_at
+BEFORE UPDATE ON meals
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER exercises_set_updated_at
+BEFORE UPDATE ON exercises
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
 
 -- 6. Daily Summary Rollup View
 CREATE OR REPLACE VIEW daily_summaries AS
