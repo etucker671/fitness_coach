@@ -1,0 +1,86 @@
+{
+  "openapi": "3.0.0",
+  "info": { "title": "Health & Workout Memory API", "version": "1.0.0" },
+  "servers": [{ "url": "https://fitness-memory-worker.etucker-fitness-coach.workers.dev/" }],
+  "paths": {
+    "/meals": {
+      "get": { "summary": "Get meals", "responses": { "200": { "description": "Success" } } },
+      "post": {
+        "summary": "Log a meal",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "meal_type": { "type": "string" },
+                  "food_name": { "type": "string" },
+                  "quantity": { "type": "number" },
+                  "units": { "type": "string" },
+                  "calories": { "type": "integer" },
+                  "protein_g": { "type": "number" },
+                  "carbs_g": { "type": "number" },
+                  "fat_g": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/exercises": {
+      "get": { "summary": "Get exercises", "responses": { "200": { "description": "Success" } } },
+      "post": {
+        "summary": "Log exercise",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "activity_description": { "type": "string" },
+                  "sets": { "type": "integer" },
+                  "reps": { "type": "integer" },
+                  "weight_lbs": { "type": "number" },
+                  "distance_miles": { "type": "number" },
+                  "calories_burned": { "type": "integer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/body_metrics": {
+      "post": {
+        "summary": "Log weight/waist",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "weight_lbs": { "type": "number" },
+                  "waist_inches": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/user_goals": {
+      "get": { "summary": "Read goal rules", "responses": { "200": { "description": "Success" } } },
+      "patch": { "summary": "Update goals document", "responses": { "200": { "description": "Success" } } }
+    },
+    "/daily_summaries": {
+      "get": { "summary": "Get daily calorie totals", "responses": { "200": { "description": "Success" } } }
+    }
+  }
+}
