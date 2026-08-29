@@ -10,7 +10,7 @@ export default {
 
     const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
     const url = new URL(request.url);
-    const resource = url.pathname.replace('/', '');
+    const resource = url.pathname.replace(/^\/+/, '');
     const validTables = ['user_goals', 'body_metrics', 'daily_notes', 'meals', 'exercises', 'daily_summaries'];
     const upsertByDate = ['body_metrics', 'daily_notes'];
 

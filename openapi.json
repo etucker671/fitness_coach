@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": { "title": "Health & Workout Memory API", "version": "1.0.0" },
-  "servers": [{ "url": "https://fitness-memory-worker.etucker-fitness-coach.workers.dev/" }],
+  "servers": [{ "url": "https://fitness-memory-worker.etucker-fitness-coach.workers.dev" }],
   "components": {
     "schemas": {}
   },
