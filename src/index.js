@@ -35,8 +35,8 @@ export default {
       const body = await request.json();
       const rows = Array.isArray(body) ? body : [body];
       const { data, error } = upsertByDate.includes(resource)
-        ? await supabase.from(resource).upsert(rows, { onConflict: 'log_date' })
-        : await supabase.from(resource).insert(rows);
+        ? await supabase.from(resource).upsert(rows, { onConflict: 'log_date' }).select()
+        : await supabase.from(resource).insert(rows).select();
       return Response.json(error || data);
     }
 
@@ -47,7 +47,7 @@ export default {
         return Response.json({ error: "Missing required 'id' query parameter" }, { status: 400 });
       }
       const body = await request.json();
-      const { data, error } = await supabase.from(resource).update(body).eq('id', id || 1);
+      const { data, error } = await supabase.from(resource).update(body).eq('id', id || 1).select();
       return Response.json(error || data);
     }
 
@@ -57,7 +57,7 @@ export default {
       if (!id) {
         return Response.json({ error: "Missing required 'id' query parameter" }, { status: 400 });
       }
-      const { data, error } = await supabase.from(resource).delete().eq('id', id);
+      const { data, error } = await supabase.from(resource).delete().eq('id', id).select();
       return Response.json(error || data);
     }
 

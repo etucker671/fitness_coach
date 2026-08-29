@@ -238,7 +238,28 @@
     },
     "/user_goals": {
       "get": { "operationId": "getUserGoals", "summary": "Read goal rules", "responses": { "200": { "description": "Success" } } },
-      "patch": { "operationId": "updateUserGoals", "summary": "Update goals document", "responses": { "200": { "description": "Success" } } }
+      "patch": {
+        "operationId": "updateUserGoals",
+        "summary": "Replace the entire goals document. This overwrites the whole stored document - always call getUserGoals first, merge the requested change into that result, and send the complete merged object back here, not just the changed fields.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "plan_data": {
+                    "type": "object",
+                    "description": "The full goals document (macro/calorie targets per day type, program rules, etc.) as a single JSON object. This replaces the entire stored value - never send a partial object."
+                  }
+                },
+                "required": ["plan_data"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
     },
     "/daily_summaries": {
       "get": { "operationId": "getDailySummaries", "summary": "Get daily calorie totals", "responses": { "200": { "description": "Success" } } }
