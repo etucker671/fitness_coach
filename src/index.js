@@ -8,7 +8,7 @@ export default {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
     const url = new URL(request.url);
     const resource = url.pathname.replace(/^\/+/, '');
     const validTables = ['user_goals', 'body_metrics', 'daily_notes', 'meals', 'exercises', 'daily_summaries'];

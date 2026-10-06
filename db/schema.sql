@@ -115,3 +115,16 @@ LEFT JOIN
 LEFT JOIN 
     (SELECT log_date, SUM(calories_burned) as calories_burned 
      FROM exercises GROUP BY log_date) e ON d.log_date = e.log_date;
+
+-- 7. Row Level Security
+-- Enabled with NO policies on purpose: the publishable (anon) and authenticated roles are
+-- denied everything, so the public Supabase REST API is closed. The Worker connects with
+-- the secret key (service_role), which bypasses RLS, and is the only way in.
+ALTER TABLE user_goals   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE body_metrics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_notes  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meals        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE exercises    ENABLE ROW LEVEL SECURITY;
+
+-- Views run as their owner by default, which would bypass RLS. Make it honor the caller.
+ALTER VIEW daily_summaries SET (security_invoker = true);
