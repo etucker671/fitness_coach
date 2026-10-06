@@ -6,7 +6,7 @@
     "@supabase/supabase-js": "^2.112.4"
   },
   "devDependencies": {
-    "wrangler": "^3.114.17"
+    "wrangler": "^4.147.0"
   },
   "description": "",
   "scripts": {
