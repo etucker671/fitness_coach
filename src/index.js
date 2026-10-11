@@ -67,6 +67,38 @@ async function handleMcp(request, supabase) {
     }
   );
 
+  const mealItem = z.object({
+    log_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+      .describe("The date eaten, in the user's local time (YYYY-MM-DD)"),
+    log_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/, 'Use HH:MM or HH:MM:SS').optional().describe('Time eaten, if known'),
+    meal_type: z.enum(['breakfast', 'lunch', 'snack', 'dinner']).optional(),
+    food_name: z.string().describe('What was eaten, e.g. "Scrambled eggs"'),
+    quantity: z.number().describe('How much, in the given units'),
+    units: z.string().describe('e.g. "large", "slice", "g", "cup"'),
+    calories: z.number().int().describe('Estimated calories for this item'),
+    protein_g: z.number().optional(),
+    carbs_g: z.number().optional(),
+    fat_g: z.number().optional(),
+    metadata: z.record(z.string(), z.any()).optional().describe('Optional extra details'),
+  });
+
+  server.registerTool(
+    'log_meals',
+    {
+      description:
+        'Log one or more food items. Estimate calories and macros yourself from what the user described before calling. Send each food as its own item in the meals array. All items are saved together or not at all.',
+      inputSchema: { meals: z.array(mealItem).min(1) },
+    },
+    async ({ meals }) => {
+      // defaultToNull: false so fields omitted from some items use the column default (0), not NULL.
+      const { data, error } = await supabase.from('meals').insert(meals, { defaultToNull: false }).select();
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
   // Stateless: a fresh server and transport per request, which suits Workers.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
