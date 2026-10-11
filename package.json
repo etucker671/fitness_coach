@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "dependencies": {
-    "@supabase/supabase-js": "^2.112.4"
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@supabase/supabase-js": "^2.112.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "wrangler": "^4.147.0"

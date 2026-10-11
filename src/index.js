@@ -1,4 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+
+// Handles every MCP message (initialize, tools/list, tools/call) sent to /mcp.
+async function handleMcp(request, supabase) {
+  const server = new McpServer({ name: 'fitness-coach', version: '1.0.0' });
+
+  server.registerTool(
+    'get_goals',
+    { description: "Get the user's current fitness plan document: their goals, daily targets, and any rules or notes they have stored. The structure is user-defined and may change, so read what is there instead of assuming specific fields." },
+    async () => {
+      const { data, error } = await supabase.from('user_goals').select('*');
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
+  // Stateless: a fresh server and transport per request, which suits Workers.
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+  await server.connect(transport);
+  return transport.handleRequest(request);
+}
 
 export default {
   async fetch(request, env) {
@@ -13,6 +38,10 @@ export default {
     const resource = url.pathname.replace(/^\/+/, '');
     const validTables = ['user_goals', 'body_metrics', 'daily_notes', 'meals', 'exercises', 'daily_summaries'];
     const upsertByDate = ['body_metrics', 'daily_notes'];
+
+    if (resource === 'mcp') {
+      return handleMcp(request, supabase);
+    }
 
     if (!validTables.includes(resource)) {
       return Response.json({ error: "Invalid Endpoint" }, { status: 404 });
