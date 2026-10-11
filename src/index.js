@@ -41,6 +41,32 @@ async function handleMcp(request, supabase) {
     }
   );
 
+  server.registerTool(
+    'log_daily_note',
+    {
+      description:
+        'Journal how the day went: energy level, challenges, victories, or general notes. One row per date: calling again for the same date merges the fields you send and leaves the others untouched.',
+      inputSchema: {
+        log_date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+          .describe("The date this note is for, in the user's local time (YYYY-MM-DD)"),
+        energy_level: z.number().int().min(1).max(10).optional().describe('Energy from 1 (drained) to 10 (great)'),
+        challenges: z.string().optional().describe('What was hard today'),
+        victories: z.string().optional().describe('What went well today'),
+        general_notes: z.string().optional().describe('Anything else worth recording'),
+      },
+    },
+    async (row) => {
+      const { data, error } = await supabase
+        .from('daily_notes')
+        .upsert([row], { onConflict: 'log_date' })
+        .select();
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
   // Stateless: a fresh server and transport per request, which suits Workers.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
