@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { z } from 'zod';
 
 // Handles every MCP message (initialize, tools/list, tools/call) sent to /mcp.
 async function handleMcp(request, supabase) {
@@ -11,6 +12,30 @@ async function handleMcp(request, supabase) {
     { description: "Get the user's current fitness plan document: their goals, daily targets, and any rules or notes they have stored. The structure is user-defined and may change, so read what is there instead of assuming specific fields." },
     async () => {
       const { data, error } = await supabase.from('user_goals').select('*');
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
+  server.registerTool(
+    'log_body_metrics',
+    {
+      description:
+        'Log weight and/or waist measurement for a date. One row per date: calling again for the same date merges the fields you send and leaves the others untouched.',
+      inputSchema: {
+        log_date: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+          .describe("The date this measurement is for, in the user's local time (YYYY-MM-DD)"),
+        weight_lbs: z.number().optional().describe('Body weight in pounds'),
+        waist_inches: z.number().optional().describe('Waist measurement in inches'),
+      },
+    },
+    async (row) => {
+      const { data, error } = await supabase
+        .from('body_metrics')
+        .upsert([row], { onConflict: 'log_date' })
+        .select();
       if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
       return { content: [{ type: 'text', text: JSON.stringify(data) }] };
     }
