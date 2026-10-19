@@ -99,6 +99,40 @@ async function handleMcp(request, supabase) {
     }
   );
 
+  const exerciseItem = z.object({
+    log_date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD')
+      .describe("The date of the activity, in the user's local time (YYYY-MM-DD)"),
+    activity_description: z.string().describe('What was done, e.g. "Back squat 5x5" or "Easy run"'),
+    sets: z.number().int().optional(),
+    reps: z.number().int().optional().describe('Reps per set'),
+    weight_lbs: z.number().optional().describe('Weight used, in pounds'),
+    distance_miles: z.number().optional(),
+    step_count: z.number().int().optional(),
+    calories_burned: z
+      .number()
+      .int()
+      .positive()
+      .describe('Estimated calories burned. Must be a real estimate greater than 0, never a placeholder.'),
+    metadata: z.record(z.string(), z.any()).optional().describe('Optional extra details'),
+  });
+
+  server.registerTool(
+    'log_exercise',
+    {
+      description:
+        'Log one or more exercise entries. Before calling, make sure you have enough detail (duration, distance, pace, or sets/reps/weight) to produce a real calories_burned estimate. If the user only said something vague like "ran" or "lifted weights", ask one clarifying question first. Never invent a number or use 0. All items are saved together or not at all.',
+      inputSchema: { exercises: z.array(exerciseItem).min(1) },
+    },
+    async ({ exercises }) => {
+      // defaultToNull: false so fields omitted from some items use the column default, not NULL.
+      const { data, error } = await supabase.from('exercises').insert(exercises, { defaultToNull: false }).select();
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
   // Stateless: a fresh server and transport per request, which suits Workers.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
