@@ -7,7 +7,21 @@
   },
   "paths": {
     "/meals": {
-      "get": { "operationId": "getMeals", "summary": "Get meals", "responses": { "200": { "description": "Success" } } },
+      "get": {
+        "operationId": "getMeals",
+        "summary": "Get meals",
+        "description": "Newest entries first, up to 500 rows. Use days to limit the window when a table could have more.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only rows from the last N days (by log_date)."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
       "post": {
         "operationId": "logMeal",
         "summary": "Log a meal",
@@ -85,7 +99,21 @@
       }
     },
     "/exercises": {
-      "get": { "operationId": "getExercises", "summary": "Get exercises", "responses": { "200": { "description": "Success" } } },
+      "get": {
+        "operationId": "getExercises",
+        "summary": "Get exercises",
+        "description": "Newest entries first, up to 500 rows. Use days to limit the window when a table could have more.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only rows from the last N days (by log_date)."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
       "post": {
         "operationId": "logExercise",
         "summary": "Log exercise",
@@ -161,7 +189,21 @@
       }
     },
     "/body_metrics": {
-      "get": { "operationId": "getBodyMetrics", "summary": "Get weight/waist history", "responses": { "200": { "description": "Success" } } },
+      "get": {
+        "operationId": "getBodyMetrics",
+        "summary": "Get weight/waist history",
+        "description": "Newest entries first, up to 500 rows. Use days to limit the window when a table could have more.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only rows from the last N days (by log_date)."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
       "post": {
         "operationId": "logBodyMetrics",
         "summary": "Log or update weight/waist for a date (upsert by log_date - safe to call again for the same date to add or correct a value)",
@@ -198,7 +240,21 @@
       }
     },
     "/daily_notes": {
-      "get": { "operationId": "getDailyNotes", "summary": "Get daily notes history", "responses": { "200": { "description": "Success" } } },
+      "get": {
+        "operationId": "getDailyNotes",
+        "summary": "Get daily notes history",
+        "description": "Newest entries first, up to 500 rows. Use days to limit the window when a table could have more.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only rows from the last N days (by log_date)."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
       "post": {
         "operationId": "logDailyNote",
         "summary": "Log or update the daily note for a date (upsert by log_date - safe to call again for the same date to amend it)",
@@ -237,7 +293,21 @@
       }
     },
     "/user_goals": {
-      "get": { "operationId": "getUserGoals", "summary": "Read goal rules", "responses": { "200": { "description": "Success" } } },
+      "get": {
+        "operationId": "getUserGoals",
+        "summary": "Read goal rules",
+        "description": "Returns the single plan document.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only return the plan if it was updated in the last N days (by updated_at). Rarely needed."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
       "patch": {
         "operationId": "updateUserGoals",
         "summary": "Replace the entire goals document. This overwrites the whole stored document - always call getUserGoals first, merge the requested change into that result, and send the complete merged object back here, not just the changed fields.",
@@ -262,7 +332,21 @@
       }
     },
     "/daily_summaries": {
-      "get": { "operationId": "getDailySummaries", "summary": "Get daily calorie totals", "responses": { "200": { "description": "Success" } } }
+      "get": {
+        "operationId": "getDailySummaries",
+        "summary": "Get daily calorie totals",
+        "description": "Newest days first, up to 500 rows. Use days to limit the window.",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "integer" },
+            "description": "Only days from the last N days (by log_date)."
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      }
     }
   }
 }
