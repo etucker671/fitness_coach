@@ -57,7 +57,7 @@ def http(method, path, body=None, token=SECRET, extra=None):
         data = json.dumps(body).encode()
     req = urllib.request.Request(f"{BASE}/{path}", data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req) as r:
+        with urllib.request.urlopen(req, timeout=30) as r:
             status, text = r.status, r.read().decode()
     except urllib.error.HTTPError as e:
         status, text = e.code, e.read().decode()
