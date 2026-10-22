@@ -3,6 +3,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { z } from 'zod';
 
+// Most rows any read (REST GET or the list_entries tool) will return.
+const MAX_ROWS = 500;
+
+// YYYY-MM-DD for N days ago, used by the `days` filter.
+const cutoffDate = (days) => new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
+
 // Handles every MCP message (initialize, tools/list, tools/call) sent to /mcp.
 async function handleMcp(request, supabase) {
   const server = new McpServer({ name: 'fitness-coach', version: '1.0.0' });
@@ -133,6 +139,28 @@ async function handleMcp(request, supabase) {
     }
   );
 
+  server.registerTool(
+    'list_entries',
+    {
+      description: `List logged rows from meals, exercises, body_metrics, or daily_notes, newest first, including each row's id (needed to edit or delete a row). Returns at most ${MAX_ROWS} rows; use days to narrow the window when a table could have more.`,
+      inputSchema: {
+        table: z.enum(['meals', 'exercises', 'body_metrics', 'daily_notes']),
+        days: z.number().int().positive().optional().describe('Only rows from the last N days'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ table, days }) => {
+      let query = supabase.from(table).select('*');
+      if (days) query = query.gte('log_date', cutoffDate(days));
+      const { data, error } = await query
+        .order('log_date', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(MAX_ROWS);
+      if (error) return { isError: true, content: [{ type: 'text', text: JSON.stringify(error) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(data) }] };
+    }
+  );
+
   // Stateless: a fresh server and transport per request, which suits Workers.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
@@ -156,10 +184,12 @@ export default {
     const validTables = ['user_goals', 'body_metrics', 'daily_notes', 'meals', 'exercises', 'daily_summaries'];
     const upsertByDate = ['body_metrics', 'daily_notes'];
 
+    // If MCP is requested, handle it with the MCP server
     if (resource === 'mcp') {
       return handleMcp(request, supabase);
     }
 
+    // Otherwise use REST (below)
     if (!validTables.includes(resource)) {
       return Response.json({ error: "Invalid Endpoint" }, { status: 404 });
     }
@@ -169,10 +199,11 @@ export default {
       let query = supabase.from(resource).select('*');
       const days = url.searchParams.get('days');
       if (days) {
-        const cutoff = new Date(Date.now() - days * 86400000).toISOString().split('T')[0];
-        query = query.gte(resource === 'user_goals' ? 'updated_at' : 'log_date', cutoff);
+        query = query.gte(resource === 'user_goals' ? 'updated_at' : 'log_date', cutoffDate(days));
       }
-      const { data, error } = await query;
+      // Newest first, so the row cap keeps the most recent entries (user_goals is one row, no log_date).
+      if (resource !== 'user_goals') query = query.order('log_date', { ascending: false });
+      const { data, error } = await query.limit(MAX_ROWS);
       return Response.json(error || data);
     }
 
