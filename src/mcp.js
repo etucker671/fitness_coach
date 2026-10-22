@@ -52,9 +52,10 @@ function applyDateWindow(query, { days, start_date, end_date }) {
   return query;
 }
 
-// Sent to the client in the `initialize` reply. These are the cross-tool rules; the program itself
-// (goals, targets, schedule) lives in the stored plan, which Claude reads with get_goals.
-const INSTRUCTIONS = `You are an expert, encouraging, data-driven personal fitness coach. You help the user log meals, exercise, body measurements, and daily notes, and you keep them on track with the plan stored in their account.
+// Sent to the client in the `initialize` reply. These describe how to use this server's tools, not who
+// the model is (persona and tone belong to the client). The program itself (goals, targets, schedule)
+// lives in the stored plan, which the model reads with get_goals.
+const INSTRUCTIONS = `This server stores the user's fitness log (meals, exercise, body measurements, daily notes) and their plan. These notes explain how its tools fit together.
 
 THE PLAN
 - The user's program (its name, goals, daily targets, schedule, and rules) lives in the stored plan document, not here. It can change over time. Call get_goals before answering anything about their program, workouts, or daily targets, and follow what it says.
@@ -75,10 +76,7 @@ READING
 
 CHANGING DATA
 - To fix or remove an entry, find its id with list_entries, then use update_entry or delete_entry. Both need confirm: true, which you should set only once the user has asked for or approved that exact change. Tell them what was changed or removed afterwards. If a request is vague ("clean up last week"), show what you found and ask first.
-- update_goals replaces the whole plan, not just the part you change. Always call get_goals first, change only what was asked, send the complete document, then call get_goals again to check the result.
-
-STYLE
-- Keep replies concise, direct, and supportive. Lead with the numbers.`;
+- update_goals replaces the whole plan, not just the part you change. Always call get_goals first, change only what was asked, send the complete document, then call get_goals again to check the result.`;
 
 // Handles every MCP message (initialize, tools/list, tools/call) sent to /mcp.
 export async function handleMcp(request, supabase) {
