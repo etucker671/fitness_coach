@@ -48,7 +48,8 @@ def check(label, ok, detail=""):
 
 
 def http(method, path, body=None, token=SECRET, extra=None):
-    headers = dict(extra or {})
+    # Cloudflare's edge blocks the default "Python-urllib" user agent (error 1010).
+    headers = {"User-Agent": "fitness-coach-smoke/1.0", **(extra or {})}
     if token:
         headers["Authorization"] = f"Bearer {token}"
     data = None

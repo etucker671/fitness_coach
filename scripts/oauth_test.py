@@ -59,7 +59,8 @@ _opener = urllib.request.build_opener(_NoRedirect)
 
 def call(method, path, body=None, headers=None, form=None):
     """Returns (status, headers, text). `form` sends application/x-www-form-urlencoded."""
-    headers = dict(headers or {})
+    # Cloudflare's edge blocks the default "Python-urllib" user agent (error 1010).
+    headers = {"User-Agent": "fitness-coach-oauth-test/1.0", **(headers or {})}
     if form is not None:
         body = urllib.parse.urlencode(form, doseq=True).encode()
         headers["Content-Type"] = "application/x-www-form-urlencoded"
