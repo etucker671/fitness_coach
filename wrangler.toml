@@ -1,3 +1,8 @@
 name = "fitness-memory-worker"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
+
+# Keep the free Supabase project from pausing after 7 idle days:
+# run scheduled() in src/index.js once a day at 12:00 UTC.
+[triggers]
+crons = ["0 12 * * *"]
