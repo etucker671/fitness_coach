@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { handleMcp } from './mcp.js';
 import { handleRest } from './rest.js';
+import { handleAuthorize } from './authorize.js';
 import { secretsMatch } from './shared.js';
 
 const supabaseFor = (env) => createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
@@ -17,14 +18,21 @@ const mcpHandler = {
 // Everything that is not /mcp and not an OAuth endpoint the library serves.
 const defaultHandler = {
   async fetch(request, env) {
+    const url = new URL(request.url);
+    const resource = url.pathname.replace(/^\/+/, '');
+
+    // The sign-in page is opened in a browser, which has no bearer token,
+    // so it is routed before the bearer check. It is guarded by OWNER_PASSWORD.
+    if (resource === 'authorize') {
+      return handleAuthorize(request, env);
+    }
+
     // Bearer token check for the REST routes (unchanged).
     const authHeader = request.headers.get('Authorization') ?? '';
     if (!(await secretsMatch(authHeader, `Bearer ${env.CUSTOM_API_SECRET}`))) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const url = new URL(request.url);
-    const resource = url.pathname.replace(/^\/+/, '');
     return handleRest(request, url, resource, supabaseFor(env));
   }
 };
