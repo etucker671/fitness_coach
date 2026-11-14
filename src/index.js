@@ -1,34 +1,68 @@
 import { createClient } from '@supabase/supabase-js';
+import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { handleMcp } from './mcp.js';
 import { handleRest } from './rest.js';
+import { secretsMatch } from './shared.js';
 
-export default {
+const supabaseFor = (env) => createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+
+// /mcp: only reached once the provider has accepted the token
+// (an OAuth access token, or the master secret via resolveExternalToken).
+const mcpHandler = {
+  fetch(request, env) {
+    return handleMcp(request, supabaseFor(env));
+  }
+};
+
+// Everything that is not /mcp and not an OAuth endpoint the library serves.
+const defaultHandler = {
   async fetch(request, env) {
-    // 1. Bearer Token Security Check
-    const authHeader = request.headers.get('Authorization');
-    if (authHeader !== `Bearer ${env.CUSTOM_API_SECRET}`) {
+    // Bearer token check for the REST routes (unchanged).
+    const authHeader = request.headers.get('Authorization') ?? '';
+    if (!(await secretsMatch(authHeader, `Bearer ${env.CUSTOM_API_SECRET}`))) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
     const url = new URL(request.url);
     const resource = url.pathname.replace(/^\/+/, '');
+    return handleRest(request, url, resource, supabaseFor(env));
+  }
+};
 
-    // If MCP is requested, handle it with the MCP server
-    if (resource === 'mcp') {
-      return handleMcp(request, supabase);
-    }
+// Built per request because the URLs depend on env.PUBLIC_URL
+// (http://localhost:8799 locally, the workers.dev address when deployed).
+function buildProvider(env) {
+  return new OAuthProvider({
+    apiRoute: '/mcp',
+    apiHandler: mcpHandler,
+    defaultHandler,
+    authorizeEndpoint: '/authorize',
+    tokenEndpoint: '/oauth/token',
+    clientRegistrationEndpoint: '/oauth/register',
+    scopesSupported: ['fitness'],
+    resourceMetadata: {
+      resource: `${env.PUBLIC_URL}/mcp`,
+      authorization_servers: [env.PUBLIC_URL],
+    },
+    // Option B: /mcp also accepts the master secret, so smoke.py and curl keep working.
+    // Called only when the token is not one this provider issued.
+    async resolveExternalToken({ token, env }) {
+      if (!(await secretsMatch(token, env.CUSTOM_API_SECRET))) return null;
+      return { props: { userId: 'owner', via: 'master-secret' }, audience: `${env.PUBLIC_URL}/mcp` };
+    },
+  });
+}
 
-    // Otherwise use REST
-    return handleRest(request, url, resource, supabase);
+export default {
+  fetch(request, env, ctx) {
+    return buildProvider(env).fetch(request, env, ctx);
   },
 
   // Runs on the cron schedule in wrangler.toml, not on web requests.
   // One tiny read counts as database activity, so the free Supabase
   // project is not paused for inactivity.
   async scheduled(controller, env) {
-    const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
-    const { error } = await supabase.from('user_goals').select('id').limit(1);
+    const { error } = await supabaseFor(env).from('user_goals').select('id').limit(1);
     if (error) {
       // Throwing marks this run as failed in the Cloudflare dashboard.
       throw new Error(`Keep-alive query failed: ${error.message}`);
