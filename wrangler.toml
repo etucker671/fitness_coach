@@ -6,3 +6,9 @@ compatibility_date = "2024-01-01"
 # run scheduled() in src/index.js once a day at 12:00 UTC.
 [triggers]
 crons = ["0 12 * * *"]
+
+# Storage for the OAuth provider (registered clients, grants, tokens).
+# The code reaches it as env.OAUTH_KV.
+[[kv_namespaces]]
+binding = "OAUTH_KV"
+id = "b61d40865e4d4c9ea1226f0d26059562"
