@@ -2,6 +2,12 @@ name = "fitness-memory-worker"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+# Plain (non-secret) settings, available as env.NAME in the code.
+# PUBLIC_URL is this Worker's own address, used to build OAuth URLs and
+# token audiences. Locally, .dev.vars overrides it with http://localhost:8799.
+[vars]
+PUBLIC_URL = "https://fitness-memory-worker.etucker-fitness-coach.workers.dev"
+
 # Keep the free Supabase project from pausing after 7 idle days:
 # run scheduled() in src/index.js once a day at 12:00 UTC.
 [triggers]
