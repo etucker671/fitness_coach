@@ -5,7 +5,9 @@ import { handleRest } from './rest.js';
 import { handleAuthorize } from './authorize.js';
 import { secretsMatch } from './shared.js';
 
-const supabaseFor = (env) => createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+const NINETY_DAYS = 90 * 24 * 60 * 60; // in seconds
+
+const supabaseFor =(env) => createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
 
 // /mcp: only reached once the provider has accepted the token
 // (an OAuth access token, or the master secret via resolveExternalToken).
@@ -48,6 +50,11 @@ function buildProvider(env) {
     tokenEndpoint: '/oauth/token',
     clientRegistrationEndpoint: '/oauth/register',
     scopesSupported: ['fitness'],
+    // A sign-in lasts as long as the app keeps using it, and expires after
+    // 90 days without use (refreshTokenTTL covers a brand-new sign-in,
+    // refreshTokenIdleTTL every refresh after that). Access tokens: 1 hour.
+    refreshTokenTTL: NINETY_DAYS,
+    refreshTokenIdleTTL: NINETY_DAYS,
     resourceMetadata: {
       resource: `${env.PUBLIC_URL}/mcp`,
       authorization_servers: [env.PUBLIC_URL],
