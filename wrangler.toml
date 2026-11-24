@@ -9,9 +9,10 @@ compatibility_date = "2024-01-01"
 PUBLIC_URL = "https://fitness-memory-worker.etucker-fitness-coach.workers.dev"
 
 # Keep the free Supabase project from pausing after 7 idle days:
-# run scheduled() in src/index.js once a day at 12:00 UTC.
+# run scheduled() in src/index.js twice a day, at 02:00 and 14:00 UTC
+# (6 PM / 6 AM Pacific in winter, 7 PM / 7 AM during daylight saving).
 [triggers]
-crons = ["0 12 * * *"]
+crons = ["0 2,14 * * *"]
 
 # Storage for the OAuth provider (registered clients, grants, tokens).
 # The code reaches it as env.OAUTH_KV.
