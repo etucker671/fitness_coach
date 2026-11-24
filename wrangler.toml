@@ -18,3 +18,7 @@ crons = ["0 12 * * *"]
 [[kv_namespaces]]
 binding = "OAUTH_KV"
 id = "b61d40865e4d4c9ea1226f0d26059562"
+
+# Enable logging
+[observability]
+enabled = true
