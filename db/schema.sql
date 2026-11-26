@@ -128,3 +128,38 @@ ALTER TABLE exercises    ENABLE ROW LEVEL SECURITY;
 
 -- Views run as their owner by default, which would bypass RLS. Make it honor the caller.
 ALTER VIEW daily_summaries SET (security_invoker = true);
+
+-- 8. Push today's totals to the phone widget when meals or exercises change
+-- Prerequisites (once): enable the pg_net extension (Database -> Extensions),
+-- and store the Worker's TOTALS_HOOK_SECRET in Supabase Vault under the name
+-- 'totals_hook_secret'. The secret is never written in this file.
+-- pg_net queues the request and sends it only after the change commits, so the
+-- Worker reads the new totals; a rolled-back change sends nothing.
+CREATE OR REPLACE FUNCTION public.notify_totals_changed()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  PERFORM net.http_post(
+    url := 'https://fitness-memory-worker.etucker-fitness-coach.workers.dev/hooks/totals',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'X-Hook-Secret', (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'totals_hook_secret')
+    ),
+    body := '{}'::jsonb
+  );
+  RETURN NULL;
+END;
+$$;
+
+-- FOR EACH STATEMENT: one call per insert/update/delete, however many rows it
+-- touched, so logging a five-item meal updates the widget once, not five times.
+CREATE TRIGGER meals_notify_totals
+AFTER INSERT OR UPDATE OR DELETE ON public.meals
+FOR EACH STATEMENT EXECUTE FUNCTION public.notify_totals_changed();
+
+CREATE TRIGGER exercises_notify_totals
+AFTER INSERT OR UPDATE OR DELETE ON public.exercises
+FOR EACH STATEMENT EXECUTE FUNCTION public.notify_totals_changed();

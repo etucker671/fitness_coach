@@ -52,6 +52,9 @@ export async function todaysTotals(supabase) {
   };
 }
 
+// A whole number with thousands separators for display: 2200 -> "2,200".
+const formatWhole = (n) => Math.round(Number(n)).toLocaleString('en-US');
+
 // Sends today's numbers to the Pushcut widget. The input names must match
 // the [[...]] variables in the widget's content. PUSHCUT_SECRET is a secret;
 // PUSHCUT_WIDGET and PUSHCUT_CONTENT are plain settings in wrangler.toml.
@@ -63,8 +66,8 @@ async function pushToWidget(env, totals) {
     body: JSON.stringify({
       content: env.PUSHCUT_CONTENT,
       inputs: {
-        'cals-consumed': String(Math.round(totals.consumed.calories)),
-        'cals-targeted': totals.targets.calories == null ? '?' : String(totals.targets.calories),
+        'cals-consumed': formatWhole(totals.consumed.calories),
+        'cals-targeted': totals.targets.calories == null ? '?' : formatWhole(totals.targets.calories),
       },
     }),
   });
