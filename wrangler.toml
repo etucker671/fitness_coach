@@ -7,6 +7,10 @@ compatibility_date = "2024-01-01"
 # token audiences. Locally, .dev.vars overrides it with http://localhost:8799.
 [vars]
 PUBLIC_URL = "https://fitness-memory-worker.etucker-fitness-coach.workers.dev"
+# The Pushcut widget that shows today's totals, and which of its contents
+# to display (names as shown in the Pushcut app). The secret is PUSHCUT_SECRET.
+PUSHCUT_WIDGET = "Calorie Tracker"
+PUSHCUT_CONTENT = "Calories v2"
 
 # Keep the free Supabase project from pausing after 7 idle days:
 # run scheduled() in src/index.js twice a day, at 02:00 and 14:00 UTC

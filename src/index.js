@@ -3,6 +3,7 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { handleMcp } from './mcp.js';
 import { handleRest } from './rest.js';
 import { handleAuthorize } from './authorize.js';
+import { handleTotalsHook } from './widget.js';
 import { secretsMatch } from './shared.js';
 
 const NINETY_DAYS = 90 * 24 * 60 * 60; // in seconds
@@ -27,6 +28,12 @@ const defaultHandler = {
     // so it is routed before the bearer check. It is guarded by OWNER_PASSWORD.
     if (resource === 'authorize') {
       return handleAuthorize(request, env);
+    }
+
+    // Called by the Supabase trigger, which has its own secret (not the
+    // master bearer token), so it is also routed before the bearer check.
+    if (resource === 'hooks/totals') {
+      return handleTotalsHook(request, env, supabaseFor(env));
     }
 
     // Bearer token check for the REST routes (unchanged).
