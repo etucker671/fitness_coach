@@ -89,6 +89,21 @@ async function withOneRetry(task) {
   }
 }
 
+// Reads today's totals and sends them to the widget (retrying once), then
+// returns them. Shared by the Supabase trigger route and the midnight cron.
+export async function pushTodaysTotals(env, supabase) {
+  const totals = await withOneRetry(async () => {
+    const result = await todaysTotals(supabase);
+    await pushToWidget(env, result);
+    return result;
+  });
+  console.log(
+    `Pushed to widget for ${totals.date}: ${formatWhole(totals.consumed.calories)} / ` +
+      (totals.targets.calories == null ? '?' : formatWhole(totals.targets.calories))
+  );
+  return totals;
+}
+
 // POST /hooks/totals: called by the Supabase trigger when meals or exercises
 // change. Guarded by its own secret (TOTALS_HOOK_SECRET in the X-Hook-Secret
 // header), not the master API secret, so the database never holds the master key.
@@ -103,12 +118,7 @@ export async function handleTotalsHook(request, env, supabase) {
   }
 
   try {
-    const totals = await withOneRetry(async () => {
-      const result = await todaysTotals(supabase);
-      await pushToWidget(env, result);
-      return result;
-    });
-    return Response.json(totals);
+    return Response.json(await pushTodaysTotals(env, supabase));
   } catch (err) {
     console.error('Totals hook failed:', err.message);
     return Response.json({ error: err.message }, { status: 500 });

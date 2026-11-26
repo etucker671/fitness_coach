@@ -15,7 +15,8 @@ Cloudflare Worker  fitness-memory-worker
    ├─ /authorize              sign-in page (owner password)
    ├─ /oauth/*, /.well-known  OAuth endpoints (handled by the library)
    ├─ /meals, /exercises ...  REST routes (bearer token)
-   └─ cron, daily             keep-alive query
+   ├─ /hooks/totals           Supabase trigger: push today's totals to the Pushcut widget
+   └─ cron, just after midnight  widget reset (also the Supabase keep-alive)
    │  Supabase secret key
    ▼
 Supabase (PostgreSQL)  Row Level Security on, no policies: only the Worker can reach the data
@@ -26,8 +27,13 @@ Supabase (PostgreSQL)  Row Level Security on, no policies: only the Worker can r
 - **OAuth:** [`@cloudflare/workers-oauth-provider`](https://github.com/cloudflare/workers-oauth-provider).
   Apps register themselves (dynamic client registration), send me to `/authorize`, and get an access
   token (1 hour) plus a refresh token. A sign-in expires after 90 days without use.
-- **Cron:** once a day (12:00 UTC) the Worker runs one small query so the free Supabase project is
-  not paused for inactivity.
+- **Phone widget:** a statement-level trigger on `meals` and `exercises` ([db/schema.sql](db/schema.sql),
+  section 8) calls `/hooks/totals` through `pg_net` after every change. The Worker reads today's
+  totals (Pacific date) and the day's targets from the plan's `macro_targets`, and sends them to a
+  Pushcut widget.
+- **Cron:** at 07:01 and 08:01 UTC (one of them is always 12:01 AM Pacific, since crons ignore
+  daylight saving) the Worker pushes the new day's totals to the widget. Those Supabase reads also
+  keep the free project from being paused for inactivity.
 
 ## MCP tools
 
@@ -54,6 +60,7 @@ personality. Tone and role go in the app: see [docs/coach-persona.md](docs/coach
 | `/mcp` | An OAuth access token issued by this Worker, **or** `CUSTOM_API_SECRET` (for scripts and curl) |
 | REST routes | `Authorization: Bearer <CUSTOM_API_SECRET>` |
 | `/authorize` | No token: it is the browser sign-in page, guarded by `OWNER_PASSWORD` |
+| `/hooks/totals` | `X-Hook-Secret: <TOTALS_HOOK_SECRET>` (sent by the Supabase trigger) |
 
 There is one user (me), so signing in is a single password. There is no rate limiting on the
 sign-in page, so the production `OWNER_PASSWORD` must be long and random.
@@ -88,6 +95,9 @@ npx wrangler login      # the login expires; run again if wrangler says you are 
 | `CUSTOM_API_SECRET` | secret, made up (`openssl rand -hex 32`) | yes | `wrangler secret put` |
 | `OWNER_PASSWORD` | secret, sign-in password | a throwaway value | `wrangler secret put` (the real one) |
 | `PUBLIC_URL` | plain variable, the Worker's own address | `http://localhost:8799` | `[vars]` in `wrangler.toml` |
+| `TOTALS_HOOK_SECRET` | secret, made up (`openssl rand -hex 32`); also stored in Supabase Vault as `totals_hook_secret` | yes | `wrangler secret put` |
+| `PUSHCUT_SECRET` | secret, from the Pushcut app (Account, webhook secret) | yes | `wrangler secret put` |
+| `PUSHCUT_WIDGET`, `PUSHCUT_CONTENT` | plain variables, the widget and content names in Pushcut | no | `[vars]` in `wrangler.toml` |
 | `OAUTH_KV` | KV namespace (clients, grants, tokens) | simulated automatically | `[[kv_namespaces]]` in `wrangler.toml` |
 
 `.dev.vars` is gitignored and holds `NAME=value` lines. Locally, its values override `[vars]`.
@@ -101,7 +111,7 @@ If the Supabase keys are lost, they are in the Supabase dashboard (Project Setti
 npx wrangler dev --port 8799 --test-scheduled < /dev/null    # terminal 1 (Ctrl+C to stop)
 python3 scripts/smoke.py                                    # terminal 2
 python3 scripts/oauth_test.py                               # asks for OWNER_PASSWORD
-curl "http://localhost:8799/__scheduled?cron=0+12+*+*+*"    # run the cron handler once
+curl "http://localhost:8799/__scheduled?cron=1+7,8+*+*+*"   # run the cron handler once (updates the widget)
 ```
 
 The `< /dev/null` stops wrangler's keyboard shortcuts from opening a browser. Both scripts accept the
@@ -116,7 +126,9 @@ python3 scripts/smoke.py https://fitness-memory-worker.etucker-fitness-coach.wor
 python3 scripts/oauth_test.py https://fitness-memory-worker.etucker-fitness-coach.workers.dev
 ```
 
-Past cron runs: Cloudflare dashboard, Workers, fitness-memory-worker.
+Past cron runs and widget pushes: Cloudflare dashboard, Workers, fitness-memory-worker, Observability
+(look for "Pushed to widget"). Supabase's side of the trigger: `SELECT * FROM net._http_response
+ORDER BY created DESC LIMIT 5;` in the SQL Editor.
 
 ## Connect an app
 
@@ -128,7 +140,7 @@ instructions (a Perplexity Space, a Claude Project).
 
 ## Gotchas
 
-- **Free Supabase projects pause after about 7 days without database activity.** The daily cron
+- **Free Supabase projects pause after about 7 days without database activity.** The nightly cron
   prevents this. If it happens anyway, restore the project from the Supabase dashboard; the Worker
   then answers Cloudflare error 1016 until it is back.
 - **Cloudflare blocks the default `Python-urllib` user agent** on workers.dev (error 1010), so the

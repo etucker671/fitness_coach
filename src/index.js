@@ -3,11 +3,10 @@ import { OAuthProvider } from '@cloudflare/workers-oauth-provider';
 import { handleMcp } from './mcp.js';
 import { handleRest } from './rest.js';
 import { handleAuthorize } from './authorize.js';
-import { handleTotalsHook } from './widget.js';
+import { handleTotalsHook, pushTodaysTotals } from './widget.js';
 import { secretsMatch } from './shared.js';
 
 const NINETY_DAYS = 90 * 24 * 60 * 60; // in seconds
-
 const supabaseFor =(env) => createClient(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
 
 // /mcp: only reached once the provider has accepted the token
@@ -80,15 +79,17 @@ export default {
     return buildProvider(env).fetch(request, env, ctx);
   },
 
-  // Runs on the cron schedule in wrangler.toml, not on web requests.
-  // One tiny read counts as database activity, so the free Supabase
-  // project is not paused for inactivity.
+  // Runs on the cron schedule in wrangler.toml (07:01 and 08:01 UTC), not on
+  // web requests. It does two jobs:
+  // 1. Widget reset: one of the two runs is always 12:01 AM Pacific (08:01 in
+  //    winter/PST, 07:01 in summer/PDT), so the widget shows the new day's
+  //    totals instead of yesterday's until the first log. The other run is harmless.
+  // 2. Supabase keep-alive: reading the totals counts as database activity, so
+  //    the free project is not paused for inactivity. If the widget push is
+  //    ever removed, keep a small Supabase read here.
+  // An error (Supabase or Pushcut) throws, which marks the run as failed in
+  // the dashboard; the Supabase reads happen before the Pushcut call either way.
   async scheduled(controller, env) {
-    const { error } = await supabaseFor(env).from('user_goals').select('id').limit(1);
-    if (error) {
-      // Throwing marks this run as failed in the Cloudflare dashboard.
-      throw new Error(`Keep-alive query failed: ${error.message}`);
-    }
-    console.log('Keep-alive query OK');
+    await pushTodaysTotals(env, supabaseFor(env));
   }
 };

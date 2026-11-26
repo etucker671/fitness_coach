@@ -12,11 +12,12 @@ PUBLIC_URL = "https://fitness-memory-worker.etucker-fitness-coach.workers.dev"
 PUSHCUT_WIDGET = "Calorie Tracker"
 PUSHCUT_CONTENT = "Calories v2"
 
-# Keep the free Supabase project from pausing after 7 idle days:
-# run scheduled() in src/index.js twice a day, at 02:00 and 14:00 UTC
-# (6 PM / 6 AM Pacific in winter, 7 PM / 7 AM during daylight saving).
+# Run scheduled() in src/index.js at 07:01 and 08:01 UTC. One of them is
+# always 12:01 AM Pacific (crons are UTC and ignore daylight saving). Each run
+# resets the phone widget to the new day's totals, and its Supabase reads also
+# keep the free project from pausing after 7 idle days.
 [triggers]
-crons = ["0 2,14 * * *"]
+crons = ["1 7,8 * * *"]
 
 # Storage for the OAuth provider (registered clients, grants, tokens).
 # The code reaches it as env.OAUTH_KV.
